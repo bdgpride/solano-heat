@@ -3,17 +3,139 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<title>Solano Heat — an open-world crime game in Port Solano</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1210;
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif; color: #fff; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* ---------- HUD ---------- */
+  #hud { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #minimap { position: absolute; left: 14px; top: 14px; width: 190px; height: 190px;
+    border: 2px solid rgba(255,255,255,0.55); border-radius: 10px; background: #131e2a;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.45); }
+  #bars { position: absolute; left: 14px; top: 216px; width: 190px; }
+  .barWrap { height: 13px; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 4px; margin-bottom: 5px; overflow: hidden; }
+  #healthBar { height: 100%; width: 100%; background: #7ed957; transition: width 0.2s; }
+  #armourBar { height: 100%; width: 0%; background: #57b6e8; transition: width 0.2s; }
+  .barWrap.small { height: 8px; }
+  #topRight { position: absolute; right: 18px; top: 12px; text-align: right;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  #cash { font-size: 30px; font-weight: 800; letter-spacing: 0.5px; color: #aef29a; }
+  #stars { font-size: 24px; letter-spacing: 3px; color: rgba(255,255,255,0.25); }
+  #objective { position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    max-width: 46%; display: none; background: rgba(12,14,20,0.72); border: 1px solid rgba(255,210,63,0.65);
+    border-radius: 8px; padding: 8px 16px; font-size: 15px; font-weight: 600; text-align: center;
+    color: #ffe9a8; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  #toast { position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+    display: none; text-align: center; text-shadow: 0 3px 10px rgba(0,0,0,0.85); }
+  .toastTitle { font-size: 40px; font-weight: 900; letter-spacing: 2px; color: #ffd23f; }
+  .toastSub { font-size: 19px; font-weight: 600; color: #fff; }
+  #bottomRight { position: absolute; right: 18px; bottom: 16px; text-align: right;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.85); }
+  #weapon { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+  #speedo { font-size: 30px; font-weight: 800; color: #ffe9a8; min-height: 36px; }
+  #dialogue { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+    width: min(620px, 72%); display: none; background: rgba(10,12,18,0.82);
+    border-left: 4px solid #ffd23f; border-radius: 6px; padding: 12px 18px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.5); }
+  #dlgName { font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #ffd23f; text-transform: uppercase; }
+  #dlgText { font-size: 16.5px; line-height: 1.45; margin-top: 3px; }
+  #prompt { position: absolute; bottom: 128px; left: 50%; transform: translateX(-50%);
+    display: none; background: rgba(12,14,20,0.78); border: 1px solid rgba(255,255,255,0.5);
+    padding: 7px 16px; border-radius: 20px; font-size: 15px; font-weight: 700; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px;
+    transform: translate(-50%, -50%); display: none; }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: rgba(255,255,255,0.9);
+    box-shadow: 0 0 4px rgba(0,0,0,0.9); }
+  #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
+  #crosshair::after { left: 0; top: 10px; width: 22px; height: 2px; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; z-index: 6; opacity: 0;
+    transition: opacity 0.25s; background: radial-gradient(ellipse at center, transparent 52%, rgba(200,20,10,0.55) 100%); }
+
+  /* ---------- Screens ---------- */
+  .screen { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 24px;
+    background: linear-gradient(180deg, rgba(24,16,32,0.62) 0%, rgba(64,24,32,0.55) 55%, rgba(120,52,28,0.6) 100%); }
+  .screen h1 { font-size: clamp(44px, 9vw, 92px); margin: 0; font-weight: 900; letter-spacing: 3px;
+    color: #ffd9a0; text-shadow: 0 4px 0 #c1442e, 0 10px 34px rgba(0,0,0,0.7); }
+  .screen h2 { margin: 4px 0 10px; font-size: clamp(15px, 2.4vw, 21px); font-weight: 600;
+    letter-spacing: 4px; color: #ffe9c9; text-transform: uppercase; }
+  .blurb { max-width: 620px; font-size: 16.5px; line-height: 1.55; color: #fdf3e3;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+  .controls { display: grid; grid-template-columns: auto auto; gap: 3px 16px; margin: 18px 0 22px;
+    font-size: 14.5px; text-align: left; background: rgba(8,10,16,0.55); padding: 14px 20px; border-radius: 10px; }
+  .controls b { color: #ffd23f; font-weight: 800; text-align: right; }
+  .btnRow { display: flex; gap: 14px; }
+  button { pointer-events: auto; cursor: pointer; font: inherit; font-size: 18px; font-weight: 800;
+    letter-spacing: 1px; color: #23140a; background: linear-gradient(180deg, #ffd23f, #f2a541);
+    border: none; border-radius: 10px; padding: 13px 34px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+  button:hover { filter: brightness(1.08); }
+  button.ghost { background: rgba(255,255,255,0.14); color: #fff; border: 1px solid rgba(255,255,255,0.6); }
+  #pauseScreen { display: none; }
+  .fine { margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.75); }
 </style>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
+<canvas id="game" aria-label="Solano Heat: an open-world crime game set in the coastal city of Port Solano"></canvas>
 <p id="status" role="status" aria-live="polite"></p>
+
+<div id="hud">
+  <canvas id="minimap" width="190" height="190"></canvas>
+  <div id="bars">
+    <div class="barWrap"><div id="healthBar"></div></div>
+    <div class="barWrap small"><div id="armourBar"></div></div>
+  </div>
+  <div id="topRight">
+    <div id="cash">$250</div>
+    <div id="stars">☆☆☆☆☆</div>
+  </div>
+  <div id="objective"></div>
+  <div id="toast"></div>
+  <div id="bottomRight">
+    <div id="speedo"></div>
+    <div id="weapon"></div>
+  </div>
+  <div id="dialogue"><div id="dlgName"></div><div id="dlgText"></div></div>
+  <div id="prompt"></div>
+  <div id="crosshair"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="startScreen" class="screen">
+  <h1>SOLANO HEAT</h1>
+  <h2>Port Solano · Est. Trouble</h2>
+  <p class="blurb">Nico Vega just rolled into a sun-soaked coastal city with a fast right foot
+    and faster debts. Fixer Marisol Kane has work: deliveries, thefts, shootouts and one last job
+    that smells like a setup. Drive anything, run from the SPPD, hold the stash house — and
+    whatever happens, keep the sunset at your back.</p>
+  <div class="controls">
+    <b>W A S D</b><span>Move / drive (arrows work too)</span>
+    <b>Mouse</b><span>Orbit camera · click the game to aim</span>
+    <b>Click</b><span>Shoot (on foot)</span>
+    <b>E</b><span>Enter / exit car · talk</span>
+    <b>Shift</b><span>Sprint</span>
+    <b>Space</b><span>Handbrake</span>
+    <b>R</b><span>Reload</span>
+    <b>P</b><span>Pause</span>
+    <b>M</b><span>Mute</span>
+  </div>
+  <div class="btnRow">
+    <button id="btnNew">NEW GAME</button>
+    <button id="btnContinue" class="ghost">CONTINUE</button>
+  </div>
+  <p class="fine">Progress saves in this browser. A complete, original open world — no downloads, no network, just drive.</p>
+</div>
+
+<div id="pauseScreen" class="screen">
+  <h1 style="font-size:52px">PAUSED</h1>
+  <p class="blurb">The heat waits for no one. Well — just this once.</p>
+  <div class="btnRow"><button id="btnResume">BACK TO PORT SOLANO</button></div>
+</div>
+
+<script src="./vendor/three.min.js"></script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
