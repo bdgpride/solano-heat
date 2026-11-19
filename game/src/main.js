@@ -590,13 +590,23 @@ function stageShot(n) {
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('pauseScreen').style.display = 'none';
   if (n === 1) {
-    const coupe = new Car(scene, 'coupe', 0xe84f3d, -200, 16, 0.35);
+    // Cover: Nico and his red coupe at the east curb of the beach boulevard,
+    // shot low from the road looking north-east up the street — the pastel
+    // blocks fill the background, staged traffic waits up the boulevard
+    // behind them, and the shoreline slides away at the frame's left edge.
+    const coupe = new Car(scene, 'coupe', 0xe84f3d, -174.8, 30, Math.PI / 2);
     coupe.driver = 'parked';
     cars.push(coupe);
-    player.mesh.position.set(-204, 0, 20.5);
-    player.heading = 2.7;
+    const sedan = new Car(scene, 'sedan', 0x3fa7d6, -180.6, 0, Math.PI / 2);
+    sedan.driver = 'parked';
+    cars.push(sedan);
+    const pickup = new Car(scene, 'pickup', 0xf7e3b0, -174.8, -12, Math.PI / 2);
+    pickup.driver = 'parked';
+    cars.push(pickup);
+    player.mesh.position.set(-177.4, 0, 26.4);
+    player.heading = -1.9;
     player.mesh.rotation.y = player.heading;
-    cameraOverride = { pos: [-195.5, 1.35, 24.5], look: [-204, 1.2, 16.5] };
+    cameraOverride = { pos: [-181.8, 1.4, 38.6], look: [-175.8, 1.2, 28.4] };
   } else if (n === 2) {
     missions.storyIndex = 5;
     const sedan = new Car(scene, 'sedan', 0x3fa7d6, -6, 49.4, 0);
